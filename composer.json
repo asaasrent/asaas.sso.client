@@ -1,9 +1,9 @@
 {
-    "name": "karim/sso-client",
+    "name": "asaas.rent/sso-client",
     "authors": [
         {
-            "name": "karim",
-            "email": "k.harazeen@gmail.com"
+            "name": "asaas.rent",
+            "email": "cto@asaas.rent"
         }
     ],
     "require": {
