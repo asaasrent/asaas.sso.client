@@ -14,6 +14,7 @@ $config = [
 		'sso_application_encryption_key' => 'EbX6EbEjTiZxhw7w',  
     ];
 
+
 $apiClient = new ApiClient($config);
 
 print_r($apiClient->askForAccessToken());
