@@ -1,5 +1,5 @@
 <?php
-namespace Asaas\SSO; 
+namespace App\SSO;
 
 use GuzzleHttp\Client;
 use Illuminate\Encryption\Encrypter;
@@ -7,9 +7,13 @@ use Illuminate\Encryption\Encrypter;
 class ApiClient
 {
 
+    const VERSION = 2;
+
     protected $applicationId;
 
     protected $applicationSecret;
+
+    protected $accessToken;
 
     protected $ssoApiUrl; 
 
@@ -17,8 +21,11 @@ class ApiClient
 
     protected $headers;
 
+    protected $config;
+
     public function __construct($config)
     {
+        $this->config = $config;
         $this->applicationId = $config['sso_application_id'];
         $this->applicationSecret = $config['sso_application_secret'];
         $this->ssoApiUrl = $config['sso_server_api_url'];
@@ -29,45 +36,79 @@ class ApiClient
         ];
     }
 
-    public function getUserAttributes($sessionId, $applicationToken) {
+    public function login($authorization_code, $callback = null)
+    {
+            $response = $this->exchangeCodeWithToken($authorization_code);
+            $this->setaccessToken($response['data']['token']);
 
-        $token = [
-            'session_id' => $sessionId,
-            'access_token' => $applicationToken,
-        ];
+            $user = $this->getUser();
 
-        $this->updateHeaders($token);
+            if(is_callable($callback)){
+                $callback($response);
+            }
 
+            return $user;
+    }
+
+    public function getUser($userId = null)
+    {
         $options = [
-            'url' => $this->ssoApiUrl . '/user',
+            'endpoint' => "user/$userId",
         ];
 
         return $this->doApiGetRequest($options);
     }
 
-    public function pushUser($user)
+    public function addUser($user)
     {
-        $encryptedData = $this->encrypt($user);
-        $requestData = ['url' => $this->ssoApiUrl . '/user', 'body' => $encryptedData];
-        return $this->askForAccessToken()->doApiPostRequest($requestData);
+        $requestData = ['endpoint' => 'user', 'body' => json_encode($user)];
+        return $this->doApiPostRequest($requestData);
     }
-
+    
     public function editUser($user)
     {
-        $requestData = ['url' => $this->ssoApiUrl . '/user', 'body' => $this->encrypt($user)];
-        return $this->askForAccessToken()->doApiPutRequest($requestData);
+        $requestData = ['endpoint' => 'user', 'body' => json_encode($user)];
+        return $this->doApiPutRequest($requestData);
     }
 
-    public function deleteUser($user)
+    public function deleteUser($userId)
     {
-        $requestData = ['url' => $this->ssoApiUrl . '/user/permission', 'body' => $this->encrypt($user)];
-        return $this->askForAccessToken()->doApiDeleteRequest($requestData);
+        $requestData = ['endpoint' => "user/permission/$userId"];
+        return $this->doApiDeleteRequest($requestData);
+    }    
+    
+    public function updateToken()
+    {
+        $this->clearCurrentToken();
+        $this->askForAccessToken();
+    }
+
+    public function clearAccessToken()
+    {
+        $this->setAccessToken(null);
+    }
+
+    public function setaccessToken($accessToken)
+    {
+        $this->accessToken = $accessToken;
+
+        $token = [
+            'access_token' => $accessToken,
+            'authorization' => "Bearer $accessToken",
+        ];
+
+        $this->updateHeaders($token);        
+    }
+
+    public function getaccessToken()
+    {
+        return $this->accessToken;
     }
 
     public function askForAccessToken()
     {
         $options = [
-            'url' => $this->ssoApiUrl . '/token',
+            'endpoint' => 'token',
         ];
 
         $apiResponse = $this->doApiGetRequest($options);
@@ -75,6 +116,22 @@ class ApiClient
         $this->updateHeaders($apiResponse['data']);
 
         return $this;
+    }
+
+    public function exchangeCodeWithToken($authorizationCode)
+    {
+        $options = [
+            'endpoint' => 'token',
+            'query' => [
+                'authorization_code' => $authorizationCode
+            ]
+        ];
+
+        $apiResponse = $this->doApiGetRequest($options);
+
+        $this->updateHeaders($apiResponse['data']);
+
+        return $apiResponse;
     }
 
     public function prepearResponseContent($response)
@@ -90,7 +147,7 @@ class ApiClient
         return $response;
     }
 
-    private function updateHeaders($headers)
+    public function updateHeaders($headers)
     {
         $tmp = [];
         foreach ($headers as $key => $value) {
@@ -103,31 +160,31 @@ class ApiClient
         }
     }
 
-    private function decrypt($text)
+    public function decrypt($text)
     {
         return $this->encrypter->decrypt($text, $this->applicationSecret);
     }
 
-    private function encrypt($text)
+    public function encrypt($text)
     {
         return $this->encrypter->encrypt($text, $this->applicationSecret);
     }    
 
-    private function doApiGetRequest($options)
+    public function doApiGetRequest($options)
     {
         $options['type'] = 'GET';
 
         return $this->doApiRequest($options);
     }
 
-    private function doApiPostRequest($options)
+    public function doApiPostRequest($options)
     {
         $options['type'] = 'POST';
 
         return $this->doApiRequest($options);
     }
 
-    private function doApiPutRequest($options)
+    public function doApiPutRequest($options)
     {
         $options['type'] = 'PUT';
 
@@ -135,16 +192,17 @@ class ApiClient
     }
 
 
-    private function doApiDeleteRequest($options)
+    public function doApiDeleteRequest($options)
     {
         $options['type'] = 'DELETE';
         return $this->doApiRequest($options);
     }
 
-    private function doApiRequest($options)
+    public function doApiRequest($options)
     {
+        $this->updateHeaders(['server_version' => $this->getVersion()]);
         $client = new Client();
-        $response = $client->request($options['type'], $options['url'],
+        $response = $client->request($options['type'], $this->ssoApiUrl . '/' . $options['endpoint'],
             [
                 'headers' => $this->headers,
                 'query' => data_get($options, 'query', null),
@@ -158,5 +216,29 @@ class ApiClient
         $result = $this->prepearResponseContent($response);
 
         return $result;
+    }
+
+    public function getVersion()
+    {
+        return self::VERSION;
+    }
+
+    public function generateRedirectUrl($extraParameters = [])
+    {
+        $params = array(
+            'application_id' => $this->config['sso_application_id'],
+            'redirect_url' => $this->config['sso_redirect_url'],
+            'server_version' => $this->getVersion(),
+        );
+
+        foreach ($extraParameters as $key => $value) {
+            $params[$key] = $value;
+        }
+
+        $ssoLoginUrl = $this->config['sso_server_login_url'];
+
+        $params = http_build_query($params);
+
+        return "{$ssoLoginUrl}?{$params}";
     }
 }
