@@ -216,3 +216,37 @@ class SSOClientController extends Controller
     }
 }
 ```
+
+----
+
+#### Add/Edit/Delete users
+##### Add user example:
+```
+$userData = [
+    'user' => [
+        'name' => 'name',
+        'email' => 'email',
+        'password' => '123456',
+    ]
+];
+
+$ssoResponse = SsoApiClient::addUser($userData);
+```
+
+##### Edit user example:
+```
+$userData = [
+	'id' => 
+        'name' => 'name',
+        'email' => 'email',
+        'password' => 'new password',
+    ]
+];
+
+$ssoResponse = SsoApiClient::editUser($userData);
+```
+
+##### Delete user example:
+```
+$ssoResponse = SsoApiClient::deleteUser(15);
+```
