@@ -1,5 +1,5 @@
 <?php
-namespace Asaas\SSO;
+namespace Asaas\SSO; 
 
 use GuzzleHttp\Client;
 use Illuminate\Encryption\Encrypter;

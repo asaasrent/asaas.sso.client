@@ -3,7 +3,7 @@ require_once "vendor/autoload.php";
 
 use Asaas\SSO\ApiClient;
 
-$config = [
+$config = [ 
 		'sso_server_api_url' => 'http://localhost/asaas.accounts/public/api/application/v1',
 		'sso_server_login_url' => 'http://localhost/asaas.accounts/public/login',
 		'sso_server_logout_url' => 'http://localhost/asaas.accounts/public/logout',
