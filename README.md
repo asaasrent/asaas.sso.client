@@ -138,9 +138,11 @@ class LoginController extends Controller
 We overrided 2 functions here, `showLoginForm` and `loggedOut`.
 
 `return redirect()->away(SsoApiClient::generateRedirectUrl());`
+
 This line will generate the redirect URL and redirect the user to the SSO login page.
 
 When the user log out, the application will redirect him to the SSO server logout page also:
+
 `return redirect()->away(config('app.sso.sso_server_logout_url'));`
 
 After the user login to the SSO server, he will redirected again to the main wbsite with code to exchange it with an access token, the response of a successful login will be like:
