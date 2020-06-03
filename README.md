@@ -145,7 +145,7 @@ When the user log out, the application will redirect him to the SSO server logou
 
 `return redirect()->away(config('app.sso.sso_server_logout_url'));`
 
-After the user login to the SSO server, he will redirected again to the main wbsite with code to exchange it with an access token, the response of a successful login will be like:
+After the user login to the SSO server, he will be redirected again to the main website with code to exchange it with an access token, the response of a successful login will be like:
 ```
 {
     "encrypted": true,
@@ -187,7 +187,7 @@ class SSOClientController extends Controller
 
     public function ssoLogin(Request $request) {
         /**
-        * login function will use  exchangr the authorization code with access token, the function accepts an optional
+        * login function will used  to exchange the authorization code with an access token, the function accepts an optional
         * closure function that will be executed after the token exchange, here, we passed closure function to save the
         * access token in the session to use it later.
         */
