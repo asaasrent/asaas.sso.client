@@ -52,8 +52,13 @@ class ApiClient
 
     public function getUser($userId = null)
     {
+        $endpoint = "user/$userId";
+        
+        if(is_null($userId))
+            $endpoint = "user";
+        
         $options = [
-            'endpoint' => "user/$userId",
+            'endpoint' => $endpoint,
         ];
 
         return $this->doApiGetRequest($options);
